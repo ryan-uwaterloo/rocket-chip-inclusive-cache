@@ -105,6 +105,31 @@ class SinkA(params: InclusiveCacheParameters) extends Module
   io.pb_pop.ready := putbuffer.io.valid(io.pb_pop.bits.index)
   io.pb_beat := putbuffer.io.data
 
+  // clock cycle counter
+    val clk_cycle = RegInit(0.U(32.W))
+    clk_cycle := clk_cycle + 1.U
+
+  when (a.valid && a.ready){
+    //printf(cf"New Sink A Request! bits = $io.req.bits\n")
+    when (a.bits.opcode === 0.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Sink A Request! opcode: PutFullData, addr: 0x${a.bits.address}%x, source: 0x${a.bits.source}%x\n")
+    } .elsewhen (a.bits.opcode === 1.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Sink A Request! opcode: PutPartialData, addr: 0x${a.bits.address}%x, source: 0x${a.bits.source}%x\n")
+    } .elsewhen (a.bits.opcode === 2.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Sink A Request! opcode: ArithmeticData, addr: 0x${a.bits.address}%x, source: 0x${a.bits.source}%x\n")
+    } .elsewhen (a.bits.opcode === 3.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Sink A Request! opcode: LogicalData, addr: 0x${a.bits.address}%x, source: 0x${a.bits.source}%x\n")
+    } .elsewhen (a.bits.opcode === 4.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Sink A Request! opcode: Get, addr: 0x${a.bits.address}%x, source: 0x${a.bits.source}%x\n")
+    } .elsewhen (a.bits.opcode === 5.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Sink A Request! opcode: Hint, addr: 0x${a.bits.address}%x, source: 0x${a.bits.source}%x\n")
+    } .elsewhen (a.bits.opcode === 6.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Sink A Request! opcode: AcquireBlock, addr: 0x${a.bits.address}%x, source: 0x${a.bits.source}%x\n")
+    } .elsewhen(a.bits.opcode === 7.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Sink A Request! opcode: AcquirePerm, addr: 0x${a.bits.address}%x, source: 0x${a.bits.source}%x\n")
+    }
+  }
+
   when (io.pb_pop.fire && io.pb_pop.bits.last) {
     lists_clr := UIntToOH(io.pb_pop.bits.index, params.putLists)
   }
