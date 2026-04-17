@@ -54,19 +54,19 @@ class InclusiveCacheBankScheduler(params: InclusiveCacheParameters) extends Modu
   io.in.d <> sourceD.io.d
   io.resp <> sourceX.io.x
 
-  //hardcode the memory delay as the SRAM model we use to verify does not have it built in :)
-  //however, clean releases need to travel ASAP, so only delay ReleaseData messages!
-  //the SRAM model has 4 cycles built in so that works
-  require(params.micro.memCycles > 4)
-  val c_is_relData  =  sourceC.io.c.valid && sourceC.io.c.bits.opcode === 7.U
-  val c_shreg_valid = ShiftRegister(c_is_relData, params.micro.memCycles-4, io.out.c.ready)
-  val c_shreg       = ShiftRegister(sourceC.io.c.bits, params.micro.memCycles-4,io.out.c.ready)
-  io.out.c.valid    := Mux(c_shreg_valid, c_shreg_valid, sourceC.io.c.valid && sourceC.io.c.bits.opcode =/= 7.U)
-  io.out.c.bits     := Mux(c_shreg_valid, c_shreg, sourceC.io.c.bits)
-  sourceC.io.c.ready := io.out.c.ready && !(sourceC.io.c.valid && sourceC.io.c.bits.opcode =/= 7.U && c_shreg_valid)
-  //a channel has no funky switching behaviours though
-  io.out.a.valid := ShiftRegister(sourceA.io.a.valid, params.micro.memCycles-4, io.out.a.ready)
-  io.out.a.bits  := ShiftRegister(sourceA.io.a.bits, params.micro.memCycles-4, io.out.a.ready)
+  // //hardcode the memory delay as the SRAM model we use to verify does not have it built in :) -> move this all to cork
+  // //however, clean releases need to travel ASAP, so only delay ReleaseData messages!
+  // //the SRAM model has 4 cycles built in so that works
+  // require(params.micro.memCycles > 4)
+  // val c_is_relData  =  sourceC.io.c.valid && sourceC.io.c.bits.opcode === 7.U
+  // val c_shreg_valid = ShiftRegister(c_is_relData, params.micro.memCycles-4, io.out.c.ready)
+  // val c_shreg       = ShiftRegister(sourceC.io.c.bits, params.micro.memCycles-4,io.out.c.ready)
+  // io.out.c.valid    := Mux(c_shreg_valid, c_shreg_valid, sourceC.io.c.valid && sourceC.io.c.bits.opcode =/= 7.U)
+  // io.out.c.bits     := Mux(c_shreg_valid, c_shreg, sourceC.io.c.bits)
+  // sourceC.io.c.ready := io.out.c.ready && !(sourceC.io.c.valid && sourceC.io.c.bits.opcode =/= 7.U && c_shreg_valid)
+  // //a channel has no funky switching behaviours though
+  // io.out.a.valid := ShiftRegister(sourceA.io.a.valid, params.micro.memCycles-4, io.out.a.ready)
+  // io.out.a.bits  := ShiftRegister(sourceA.io.a.bits, params.micro.memCycles-4, io.out.a.ready)
 
   val sinkA = Module(new SinkA(params))
   val sinkC = Module(new SinkC(params))
