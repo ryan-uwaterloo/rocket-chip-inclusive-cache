@@ -55,4 +55,30 @@ class SourceA(params: InclusiveCacheParameters) extends Module
   a.bits.mask    := ~0.U(params.outer.manager.beatBytes.W)
   a.bits.data    := 0.U
   a.bits.corrupt := false.B
+
+  // clock cycle counter
+    val clk_cycle = RegInit(0.U(32.W))
+    clk_cycle := clk_cycle + 1.U
+
+  when (a.valid && a.ready){
+    
+    //printf_helper.ReqPrinter.printSrcA(a.bits)
+    //printf(cf"New Source A Request! opcode: ${a.bits.opcode}, addr: 0x${a.bits.address}%x\n")
+    when (a.bits.opcode === 0.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source A Request! opcode: PutFullData, addr: 0x${a.bits.address}%x\n")
+    } .elsewhen (a.bits.opcode === 1.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source A Request! opcode: PutPartialData, addr: 0x${a.bits.address}%x\n")
+    } .elsewhen (a.bits.opcode === 2.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source A Request! opcode: ArithmeticData, addr: 0x${a.bits.address}%x\n")
+    } .elsewhen (a.bits.opcode === 3.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source A Request! opcode: LogicalData, addr: 0x${a.bits.address}%x\n")
+    } .elsewhen (a.bits.opcode === 4.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source A Request! opcode: Get, addr: 0x${a.bits.address}%x\n")
+    } .elsewhen (a.bits.opcode === 5.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source A Request! opcode: Hint, addr: 0x${a.bits.address}%x\n")
+    } .elsewhen (a.bits.opcode === 6.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source A Request! opcode: AcquireBlock, addr: 0x${a.bits.address}%x\n")
+    } .elsewhen(a.bits.opcode === 7.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source A Request! opcode: AcquirePerm, addr: 0x${a.bits.address}%x\n")
+    }}
 }

@@ -37,6 +37,9 @@ class InclusiveCacheBankScheduler(params: InclusiveCacheParameters) extends Modu
     val resp = Decoupled(new SourceXRequest(params))
   })
 
+  val clk_cycle = RegInit(0.U(32.W))
+  clk_cycle := clk_cycle + 1.U
+
   val sourceA = Module(new SourceA(params))
   val sourceB = Module(new SourceB(params))
   val sourceC = Module(new SourceC(params))
@@ -60,6 +63,7 @@ class InclusiveCacheBankScheduler(params: InclusiveCacheParameters) extends Modu
   val c_shreg       = ShiftRegister(sourceC.io.c.bits, params.micro.memCycles-4,io.out.c.ready)
   io.out.c.valid    := Mux(c_shreg_valid, c_shreg_valid, sourceC.io.c.valid && sourceC.io.c.bits.opcode =/= 7.U)
   io.out.c.bits     := Mux(c_shreg_valid, c_shreg, sourceC.io.c.bits)
+  sourceC.io.c.ready := io.out.c.ready && !(sourceC.io.c.valid && sourceC.io.c.bits.opcode =/= 7.U && c_shreg_valid)
   //a channel has no funky switching behaviours though
   io.out.a.valid := ShiftRegister(sourceA.io.a.valid, params.micro.memCycles-4, io.out.a.ready)
   io.out.a.bits  := ShiftRegister(sourceA.io.a.bits, params.micro.memCycles-4, io.out.a.ready)
@@ -127,6 +131,14 @@ class InclusiveCacheBankScheduler(params: InclusiveCacheParameters) extends Modu
       (directory.io.write.ready || !m.io.schedule.bits.dir.valid)
   }.reverse)
 
+  val b_stalled = mshrs.map { m =>
+    m.io.schedule.valid && m.io.schedule.bits.b.valid && !sourceB.io.req.ready
+  }.reduce(_ || _)
+
+  when (b_stalled) {
+    printf(cf"@ clk_cycle ${clk_cycle}: MSHR stalled on sourceB!\n")
+  }
+
   // Round-robin arbitration of MSHRs
   val robin_filter = RegInit(0.U(params.mshrs.W))
   val robin_request = Cat(mshr_request, mshr_request & robin_filter)
@@ -151,6 +163,10 @@ class InclusiveCacheBankScheduler(params: InclusiveCacheParameters) extends Modu
   sourceD.io.req.valid := schedule.d.valid
   sourceE.io.req.valid := schedule.e.valid
   sourceX.io.req.valid := schedule.x.valid
+
+  when (schedule.a.valid || schedule.b.valid || schedule.c.valid || schedule.d.valid ||schedule.e.valid || schedule.x.valid) {
+    printf(cf"@ clk_cycle ${clk_cycle}: MSHR ${mshr_select} wins arbitration.\n")
+  }
 
   sourceA.io.req.bits.viewAsSupertype(chiselTypeOf(schedule.a.bits)) := schedule.a.bits
   sourceB.io.req.bits.viewAsSupertype(chiselTypeOf(schedule.b.bits)) := schedule.b.bits
@@ -295,6 +311,20 @@ class InclusiveCacheBankScheduler(params: InclusiveCacheParameters) extends Modu
       m.io.allocate.bits.viewAsSupertype(chiselTypeOf(request.bits)) := request.bits
       m.io.allocate.bits.repeat := false.B
     }
+  }
+
+  when (bypass) { //printfs to track allocation/mshr hits
+    when (sinkA.io.req.valid) {
+        printf(cf"@ clk_cycle ${clk_cycle}: Req from A passed to MSHR ${mshr_select} due to hit on set ${request.bits.set}\n")
+    }.elsewhen (sinkC.io.req.valid === 1.U) {
+        printf(cf"@ clk_cycle ${clk_cycle}: Req from C passed to MSHR ${mshr_select} due to hit on set ${request.bits.set}\n")
+    }.elsewhen (sinkX.io.req.valid === 1.U) {
+        printf(cf"@ clk_cycle ${clk_cycle}: Req from X passed to MSHR ${mshr_select} due to hit on set ${request.bits.set}\n")
+    }
+  }.elsewhen (alloc & request.valid && !mshr_uses_directory_assuming_no_bypass) {
+      printf(cf"@ clk_cycle ${clk_cycle}: Allocating MSHR ${OHToUInt(mshr_insertOH)} For Request!\n")
+  }.elsewhen (queue & request.valid) {
+      printf(cf"@ clk_cycle ${clk_cycle}: Queuing to MSHR ${OHToUInt(lowerMatches1)} For Request!\n")
   }
 
   when (request.valid && nestB && !bc_mshr.io.status.valid && !c_mshr.io.status.valid && !mshr_uses_directory_assuming_no_bypass) {

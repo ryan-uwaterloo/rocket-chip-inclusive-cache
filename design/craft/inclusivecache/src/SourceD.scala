@@ -140,6 +140,14 @@ class SourceD(params: InclusiveCacheParameters) extends Module
   io.req.ready := !busy
   s1_valid := (busy || io.req.valid) && (!s1_valid_r || io.bs_radr.ready)
 
+  // clock cycle counter
+  val clk_cycle = RegInit(0.U(32.W))
+  clk_cycle := clk_cycle + 1.U
+
+  when(s1_valid && s1_first) {
+    printf(cf"@ clk_cycle ${clk_cycle}: Request hit SourceD Pipeline!\n")
+  }
+
   ////////////////////////////////////// STAGE 2 //////////////////////////////////////
   // Fetch the request data
 
@@ -227,6 +235,26 @@ class SourceD(params: InclusiveCacheParameters) extends Module
   d.bits.denied  := s3_req.bad
   d.bits.data    := s3_rdata
   d.bits.corrupt := s3_req.bad && d.bits.opcode(0)
+
+  when (d.valid){
+    when (d.bits.opcode === 0.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source D Request! opcode: AccessAck, source: 0x${d.bits.source}%x\n")
+    } .elsewhen (d.bits.opcode === 1.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source D Request! opcode: AccessAckData, source: 0x${d.bits.source}%x, data: 0x${d.bits.data}%x\n")
+    } .elsewhen (d.bits.opcode === 2.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source D Request! opcode: HintAck, source: 0x${d.bits.source}%x\n")
+    } .elsewhen (d.bits.opcode === 3.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source D Request! opcode: BAD_REQ\n")
+    } .elsewhen (d.bits.opcode === 4.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source D Request! opcode: Grant, source: 0x${d.bits.source}%x\n")
+    } .elsewhen (d.bits.opcode === 5.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source D Request! opcode: GrantData, source: 0x${d.bits.source}%x, data: 0x${d.bits.data}%x\n")
+    } .elsewhen (d.bits.opcode === 6.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source D Request! opcode: ReleaseAck, source: 0x${d.bits.source}%x\n")
+    } .elsewhen(d.bits.opcode === 7.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source D Request! opcode: BAD_REQ\n")
+    }
+  }
 
   queue.io.deq.ready := s3_valid && s4_ready && s3_need_r
   assert (!s3_full || !s3_need_r || queue.io.deq.valid)

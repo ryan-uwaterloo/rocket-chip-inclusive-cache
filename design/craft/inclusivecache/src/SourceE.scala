@@ -44,5 +44,13 @@ class SourceE(params: InclusiveCacheParameters) extends Module
 
   e.bits.sink := io.req.bits.sink
 
+  // clock cycle counter
+    val clk_cycle = RegInit(0.U(32.W))
+    clk_cycle := clk_cycle + 1.U
+
+  when (e.valid && e.ready){
+    printf(cf"@ clk_cycle ${clk_cycle}: New Source E Request! opcode: GrantAck, sink: 0x${e.bits.sink}%x\n")
+  }
+
   // we can't cover valid+!ready, because no backpressure on E is common
 }

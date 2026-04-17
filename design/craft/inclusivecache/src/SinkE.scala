@@ -45,5 +45,13 @@ class SinkE(params: InclusiveCacheParameters) extends Module
     e.ready := true.B
     io.resp.valid := e.valid
     io.resp.bits.sink := e.bits.sink
+
+    // clock cycle counter
+    val clk_cycle = RegInit(0.U(32.W))
+    clk_cycle := clk_cycle + 1.U
+
+    when (e.valid && e.ready){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Sink E Request! opcode: GrantAck, sink: 0x${e.bits.sink}%x\n")
+    }
   }
 }

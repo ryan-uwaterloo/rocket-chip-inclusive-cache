@@ -115,6 +115,30 @@ class SourceC(params: InclusiveCacheParameters) extends Module
   c.bits.data    := io.bs_dat.data
   c.bits.corrupt := false.B
 
+  // clock cycle counter
+    val clk_cycle = RegInit(0.U(32.W))
+    clk_cycle := clk_cycle + 1.U
+
+  when (c.valid && c.ready){
+    when (c.bits.opcode === 0.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source C Request! opcode: AccessAck, addr: 0x${c.bits.address}%x\n")
+    } .elsewhen (c.bits.opcode === 1.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source C Request! opcode: AccessAckData, addr: 0x${c.bits.address}%x, data: 0x${c.bits.data}%x\n")
+    } .elsewhen (c.bits.opcode === 2.U){
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source C Request! opcode: HintAck, addr: 0x${c.bits.address}%x\n")
+    } .elsewhen (c.bits.opcode === 3.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source C Request! opcode: BAD_REQ, addr: 0x${c.bits.address}%x\n")
+    } .elsewhen (c.bits.opcode === 4.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source C Request! opcode: ProbeAck, addr: 0x${c.bits.address}%x\n")
+    } .elsewhen (c.bits.opcode === 5.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source C Request! opcode: ProbeAckData, addr: 0x${c.bits.address}%x, data: 0x${c.bits.data}%x\n")
+    } .elsewhen (c.bits.opcode === 6.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source C Request! opcode: Release, addr: 0x${c.bits.address}%x\n")
+    } .elsewhen(c.bits.opcode === 7.U) {
+      printf(cf"@ clk_cycle ${clk_cycle}: New Source C Request! opcode: ReleaseData, addr: 0x${c.bits.address}%x, data: 0x${c.bits.data}%x\n")
+    }
+  }
+
   // We never accept at the front-end unless we're sure things will fit
   assert(!c.valid || c.ready)
   params.ccover(!c.ready, "SOURCEC_QUEUE_FULL", "Eviction queue fully utilized")
