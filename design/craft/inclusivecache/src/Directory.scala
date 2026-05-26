@@ -92,11 +92,20 @@ class Directory(params: InclusiveCacheParameters) extends Module
 
   require (codeBits <= 256)
 
+  val wipeVec = VecInit((0 until params.cache.ways).map {  i => //the is the internal vec of the parrp state 
+    var way = Wire(new DirectoryEntry(params))//blank bundle
+    way.dirty := false.B
+    way.state := TIP
+    way.clients := 0.U
+    way.tag := i.U
+    way.asUInt //this should init our wipevector to produce a set of unique dirty entires
+  })
+
   write.ready := !io.read.valid
   when (!ren && wen) {
     cc_dir.write(
       Mux(wipeDone, write.bits.set, wipeSet),
-      VecInit.fill(params.cache.ways) { Mux(wipeDone, write.bits.data.asUInt, 0.U) },
+      Mux(wipeDone,VecInit.fill(params.cache.ways){write.bits.data.asUInt}, wipeVec),
       UIntToOH(write.bits.way, params.cache.ways).asBools.map(_ || !wipeDone))
   }
 
